@@ -15,3 +15,6 @@ Thumbs.db
 
 # 看板临时截图
 dashboard/_*.png
+
+# 截图临时文件
+docs/_*.png

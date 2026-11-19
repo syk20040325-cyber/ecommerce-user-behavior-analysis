@@ -4,6 +4,10 @@
 
 **核心产出**：一套可交互的 Web 数据看板（12 张图表 + 5 条结论），一份带量化收益建议的分析报告。
 
+**在线看板（Demo）**：<https://syk20040325-cyber.github.io/ecommerce-user-behavior-analysis/>
+
+[![看板预览](docs/preview.png)](https://syk20040325-cyber.github.io/ecommerce-user-behavior-analysis/)
+
 ---
 
 ## 一、项目做了什么
@@ -48,6 +52,9 @@
 ├── reports/
 │   ├── 分析报告.md            # 完整分析报告（含行动建议与预估收益）
 │   └── metrics.txt            # 所有关键指标的纯文本摘要
+├── docs/preview.png           # 看板预览图（README 封面）
+├── index.html                 # 站点入口，跳转到 dashboard/
+├── .nojekyll                  # 关闭 GitHub Pages 的 Jekyll 处理
 └── README.md
 ```
 
