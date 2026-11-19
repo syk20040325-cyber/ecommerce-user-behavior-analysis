@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电商用户购买行为分析看板 · 2025</title>
+<script src="assets/js/echarts.min.js"></script>
+<script src="assets/js/data.js"></script>
+<style>
+  :root{
+    --bg:#f3f4f6; --card:#ffffff; --line:#e8eaee;
+    --t1:#141a22; --t2:#5c6675; --t3:#9099a6;
+    --blue:#3b6ef5; --cyan:#0ea5b7; --violet:#7c5cf0;
+    --amber:#e9a13b; --red:#dd524c; --green:#1c9c6b;
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 6px 18px -8px rgba(16,24,40,.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--t1);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased; font-size:13px; line-height:1.5;
+  }
+  /* ---------- header ---------- */
+  header{
+    position:sticky; top:0; z-index:20; background:rgba(255,255,255,.92);
+    backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
+  }
+  .hd{max-width:1560px;margin:0 auto;padding:14px 26px;display:flex;align-items:center;gap:26px;}
+  .brand{display:flex;flex-direction:column;gap:2px;}
+  .brand h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px;}
+  .brand span{font-size:11.5px;color:var(--t3);letter-spacing:.2px;}
+  nav{margin-left:auto;display:flex;gap:4px;}
+  nav a{
+    color:var(--t2);text-decoration:none;font-size:12.5px;padding:6px 11px;border-radius:7px;
+    transition:.15s;
+  }
+  nav a:hover{background:#eef2fd;color:var(--blue);}
+  /* ---------- layout ---------- */
+  main{max-width:1560px;margin:0 auto;padding:22px 26px 64px;}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);padding:16px 18px 12px;min-width:0;
+  }
+  .card-hd{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+  .card-hd h3{margin:0;font-size:13.5px;font-weight:600;letter-spacing:.2px;}
+  .card-hd .sub{font-size:11.5px;color:var(--t3);margin-top:2px;}
+  .card-hd .tag{
+    margin-left:auto;font-size:11px;color:var(--blue);background:#eff3ff;
+    border:1px solid #dde6ff;border-radius:6px;padding:2px 7px;white-space:nowrap;
+  }
+  .chart{width:100%;}
+  /* ---------- KPI ---------- */
+  .kpi-card{
+    grid-column:span 3;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);padding:14px 16px 13px;position:relative;overflow:hidden;
+  }
+  .kpi-card:before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue);opacity:.85;
+  }
+  .kpi-card.k2:before{background:var(--cyan)}
+  .kpi-card.k3:before{background:var(--violet)}
+  .kpi-card.k4:before{background:var(--amber)}
+  .kpi-label{font-size:12px;color:var(--t2);display:flex;align-items:center;gap:5px;}
+  .kpi-value{font-size:27px;font-weight:650;letter-spacing:-.5px;margin:5px 0 2px;font-variant-numeric:tabular-nums;}
+  .kpi-value small{font-size:12.5px;font-weight:500;color:var(--t2);margin-left:3px;letter-spacing:0;}
+  .kpi-foot{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--t3);}
+  .delta{font-weight:600;font-variant-numeric:tabular-nums;}
+  .up{color:var(--red)} .down{color:var(--green)} .flat{color:var(--t3)}
+  /* ---------- table ---------- */
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{
+    text-align:right;font-weight:500;color:var(--t3);font-size:11px;padding:7px 6px;
+    border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  th:first-child,td:first-child{text-align:left;}
+  td{padding:7px 6px;border-bottom:1px solid #f3f4f6;text-align:right;font-variant-numeric:tabular-nums;color:var(--t1);}
+  tr:last-child td{border-bottom:none;}
+  tr.hl td{background:#f7f9ff;}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:6px;vertical-align:1px;}
+  /* ---------- insight ---------- */
+  .ins{
+    grid-column:span 4;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);padding:15px 17px;
+  }
+  .ins .no{
+    font-size:11px;font-weight:700;letter-spacing:1px;color:var(--blue);
+    background:#eff3ff;border-radius:5px;padding:2px 7px;display:inline-block;
+  }
+  .ins h4{margin:9px 0 6px;font-size:13.5px;font-weight:600;line-height:1.45;}
+  .ins p{margin:0;font-size:12.2px;color:var(--t2);line-height:1.68;}
+  .ins b{color:var(--t1);font-weight:600;}
+  .ins .act{
+    margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);
+    font-size:12px;color:var(--blue);
+  }
+  /* ---------- legend chips ---------- */
+  .chips{display:flex;flex-wrap:wrap;gap:14px;padding:4px 2px 10px;font-size:11.5px;color:var(--t2);}
+  .chips i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;}
+  /* ---------- footer ---------- */
+  footer{
+    max-width:1560px;margin:0 auto;padding:0 26px 40px;color:var(--t3);font-size:11.5px;line-height:1.8;
+  }
+  footer b{color:var(--t2);font-weight:600;}
+  .sect-title{
+    grid-column:span 12;display:flex;align-items:baseline;gap:10px;margin:16px 0 -4px;
+  }
+  .sect-title h2{margin:0;font-size:14px;font-weight:600;letter-spacing:.3px;}
+  .sect-title span{font-size:11.5px;color:var(--t3);}
+  @media (max-width:1240px){
+    .kpi-card{grid-column:span 4}
+    .ins{grid-column:span 6}
+    .c8,.c7,.c6,.c5,.c4{grid-column:span 12 !important}
+  }
+  @media (max-width:760px){
+    .kpi-card{grid-column:span 6} .ins{grid-column:span 12} nav{display:none}
+  }
+  .c3{grid-column:span 3} .c4{grid-column:span 4} .c5{grid-column:span 5}
+  .c6{grid-column:span 6} .c7{grid-column:span 7} .c8{grid-column:span 8}
+  .c12{grid-column:span 12}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd">
+    <div class="brand">
+      <h1>电商用户购买行为分析看板</h1>
+      <span id="hdMeta">数据周期加载中…</span>
+    </div>
+    <nav>
+      <a href="#s1">经营大盘</a>
+      <a href="#s2">转化漏斗</a>
+      <a href="#s3">用户分层</a>
+      <a href="#s4">新客留存</a>
+      <a href="#s5">品类结构</a>
+      <a href="#s6">时空规律</a>
+      <a href="#s7">结论建议</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== 大盘 ===================== -->
+  <div class="grid" id="s1">
+    <div class="sect-title"><h2>一、经营大盘</h2><span>全年净GMV、订单、用户与效率指标</span></div>
+    <div id="kpis" class="grid" style="grid-column:span 12;gap:16px;"></div>
+
+    <div class="card c8">
+      <div class="card-hd">
+        <div><h3>月度净GMV 与 客单价走势</h3>
+          <div class="sub">柱=净GMV（万元，左轴）｜折线=客单价（元，右轴）</div></div>
+        <div class="tag">大促月 GMV 脉冲明显</div>
+      </div>
+      <div id="c-trend" class="chart" style="height:320px"></div>
+    </div>
+
+    <div class="card c4">
+      <div class="card-hd">
+        <div><h3>全站转化漏斗</h3>
+          <div class="sub">右侧=环节转化率（相对上一环节）；宽幅设最小可见度，数值以标注为准</div></div>
+      </div>
+      <div id="c-funnel" class="chart" style="height:320px"></div>
+    </div>
+  </div>
+
+  <!-- ===================== 漏斗 / 渠道 ===================== -->
+  <div class="grid" id="s2" style="margin-top:16px">
+    <div class="sect-title"><h2>二、渠道效率与成交结构</h2><span>用「每会话产值」而不是只看转化率来评估渠道</span></div>
+
+    <div class="card c7">
+      <div class="card-hd">
+        <div><h3>各渠道每会话产值（RPS）</h3>
+          <div class="sub">净GMV ÷ 会话数，综合了转化率与客单价；标签为该渠道支付转化率</div></div>
+        <div class="tag">信息流广告效率最低</div>
+      </div>
+      <div id="c-channel" class="chart" style="height:300px"></div>
+    </div>
+
+    <div class="card c5">
+      <div class="card-hd">
+        <div><h3>订单价格带分布</h3>
+          <div class="sub">订单量占比 vs 净GMV占比，看「笔单价结构」</div></div>
+      </div>
+      <div id="c-price" class="chart" style="height:300px"></div>
+    </div>
+  </div>
+
+  <!-- ===================== 用户分层 ===================== -->
+  <div class="grid" id="s3" style="margin-top:16px">
+    <div class="sect-title"><h2>三、用户分层（RFM）</h2><span>人群占比与 GMV 占比的错配，决定运营预算该投给谁</span></div>
+
+    <div class="card c7">
+      <div class="card-hd">
+        <div><h3>八分群：人数占比 vs 净GMV占比</h3>
+          <div class="sub">按 R（最近购买）/ F（购买频次）/ M（累计金额）各五分位打分后分群</div></div>
+        <div class="tag" id="paretoTag"></div>
+      </div>
+      <div id="c-rfm" class="chart" style="height:360px"></div>
+    </div>
+
+    <div class="card c5">
+      <div class="card-hd">
+        <div><h3>分层明细</h3><div class="sub">人均频次、客单价与平均沉睡天数</div></div>
+      </div>
+      <div style="max-height:372px;overflow:auto">
+        <table id="segTable">
+          <thead><tr><th>分群</th><th>人数</th><th>GMV(万)</th><th>AOV</th><th>频次</th><th>沉睡</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 新客 / 留存 ===================== -->
+  <div class="grid" id="s4" style="margin-top:16px">
+    <div class="sect-title"><h2>四、新老客贡献与留存</h2><span>增长是靠拉新还是靠老客复购？留存曲线说明什么</span></div>
+
+    <div class="card c6">
+      <div class="card-hd">
+        <div><h3>新客 / 老客 GMV 构成</h3>
+          <div class="sub">堆叠柱=净GMV（万元）｜折线=新客GMV占比（右轴）</div></div>
+      </div>
+      <div id="c-newold" class="chart" style="height:300px"></div>
+    </div>
+
+    <div class="card c6">
+      <div class="card-hd">
+        <div><h3>新客次月留存率</h3>
+          <div class="sub">当月新客在下一个月仍有下单的比例，虚线为全年均值</div></div>
+      </div>
+      <div id="c-retention" class="chart" style="height:300px"></div>
+    </div>
+
+    <div class="card c12">
+      <div class="card-hd">
+        <div><h3>月度 Cohort 留存矩阵</h3>
+          <div class="sub">行=首购月份队列，列=首购后第 N 月仍有下单的用户占比（订单口径）</div></div>
+        <div class="tag">首购后 1 个月即跌至 20% 上下</div>
+      </div>
+      <div id="c-cohort" class="chart" style="height:300px"></div>
+    </div>
+  </div>
+
+  <!-- ===================== 品类 ===================== -->
+  <div class="grid" id="s5" style="margin-top:16px">
+    <div class="sect-title"><h2>五、品类结构</h2><span>份额×份额增速定位品类角色，再用毛利与退款率做质量校验</span></div>
+
+    <div class="card c6">
+      <div class="card-hd">
+        <div><h3>品类四象限</h3>
+          <div class="sub">X=净GMV份额｜Y=份额增速（H2 vs H1，已剔除大盘季节性）｜气泡大小=GMV</div></div>
+      </div>
+      <div id="c-quad" class="chart" style="height:330px"></div>
+      <div class="chips">
+        <span><i style="background:#e9a13b"></i>明星（高份额·高增速）</span>
+        <span><i style="background:#3b6ef5"></i>现金牛（高份额·低增速）</span>
+        <span><i style="background:#7c5cf0"></i>机会（低份额·高增速）</span>
+        <span><i style="background:#b6bcc6"></i>收缩（低份额·低增速）</span>
+      </div>
+    </div>
+
+    <div class="card c6">
+      <div class="card-hd">
+        <div><h3>品类 GMV 与退款率</h3>
+          <div class="sub">柱=净GMV（万元）｜折线=退款订单占比（右轴）</div></div>
+        <div class="tag">女装退款率 14.5%</div>
+      </div>
+      <div id="c-cat" class="chart" style="height:330px"></div>
+    </div>
+  </div>
+
+  <!-- ===================== 时空 ===================== -->
+  <div class="grid" id="s6" style="margin-top:16px">
+    <div class="sect-title"><h2>六、下单时段与大促效率</h2><span>什么时间该推、什么活动真赚钱</span></div>
+
+    <div class="card c7">
+      <div class="card-hd">
+        <div><h3>周 × 小时 下单热力</h3>
+          <div class="sub">颜色=该时段订单占全年的比重（%），越深越集中</div></div>
+      </div>
+      <div id="c-heat" class="chart" style="height:290px"></div>
+    </div>
+
+    <div class="card c5">
+      <div class="card-hd">
+        <div><h3>大促日历效率</h3>
+          <div class="sub">柱=日均净GMV（万元）｜标签=相对日常的倍数</div></div>
+      </div>
+      <div id="c-promo" class="chart" style="height:290px"></div>
+    </div>
+  </div>
+
+  <!-- ===================== 结论 ===================== -->
+  <div class="grid" id="s7" style="margin-top:16px">
+    <div class="sect-title"><h2>七、核心结论与行动建议</h2><span>每条结论都指向一个可执行动作与预估收益</span></div>
+    <div id="insights" class="grid" style="grid-column:span 12;gap:16px"></div>
+  </div>
+</main>
+
+<footer>
+  <b>数据口径：</b>数据周期 2025-01-01 至 2025-12-31；净GMV = 实付金额 − 退款金额；支付转化率 = 支付会话 / 总访问会话；
+  新客 = 注册 90 天内完成首购，其余为老客；RFM 分群按各维度五分位打分，≥4 分记为「高」；
+  品类份额增速 = 下半年品类份额 ÷ 上半年品类份额 − 1（剔除大盘季节性）。
+  <br><b>说明：</b>本看板基于可复现的模拟数据集（<code>src/generate_data.py</code>，固定随机种子），
+  数据生成规则内嵌了渠道差异、大促脉冲、用户价值分层等真实业务规律，用于演示完整分析链路；替换为真实埋点表即可直接复用。
+</footer>
+
+<script>
+const D = window.DASHBOARD_DATA;
+const charts = [];
+const F = (n, d=1) => Number(n).toLocaleString('zh-CN', {minimumFractionDigits:d, maximumFractionDigits:d});
+const C = {blue:'#3b6ef5', cyan:'#0ea5b7', violet:'#7c5cf0', amber:'#e9a13b',
+           red:'#dd524c', green:'#1c9c6b', grid:'#eef0f3', axis:'#9099a6'};
+
+function mk(id, opt){
+  const el = document.getElementById(id);
+  const ch = echarts.init(el, null, {renderer:'canvas'});
+  ch.setOption(opt);
+  charts.push(ch);
+  return ch;
+}
+const baseAxis = {
+  axisLine:{lineStyle:{color:'#e3e6ea'}},
+  axisTick:{show:false},
+  axisLabel:{color:C.axis, fontSize:11},
+  splitLine:{lineStyle:{color:C.grid}}
+};
+const baseTip = {
+  backgroundColor:'#fff', borderColor:'#e8eaee', borderWidth:1,
+  padding:[9,12], textStyle:{color:'#141a22', fontSize:12},
+  extraCssText:'box-shadow:0 6px 20px -6px rgba(16,24,40,.18);border-radius:8px;'
+};
+
+/* ---------------- header meta ---------------- */
+document.getElementById('hdMeta').textContent =
+  `${D.meta.period} · 样本 ${F(D.meta.users_total,0)} 注册用户 / ${F(D.meta.sessions,0)} 会话 / ${F(D.meta.orders,0)} 支付订单`;
+
+/* ---------------- KPI ---------------- */
+const kpiWrap = document.getElementById('kpis');
+const kpiColors = ['','k2','k3','k4'];
+D.kpi.forEach((k, i) => {
+  const div = document.createElement('div');
+  div.className = 'kpi-card ' + kpiColors[i % 4];
+  let badge = '';
+  if (k.delta !== null && k.delta !== undefined){
+    const p = k.delta * 100;
+    const cls = Math.abs(p) < 0.05 ? 'flat' : (p > 0 ? 'up' : 'down');
+    const arrow = Math.abs(p) < 0.05 ? '—' : (p > 0 ? '▲' : '▼');
+    badge = `<span class="delta ${cls}">${arrow} ${Math.abs(p).toFixed(1)}%</span><span>较上半年</span>`;
+  } else {
+    badge = `<span class="flat">${k.note}</span>`;
+  }
+  div.innerHTML = `
+    <div class="kpi-label">${k.label}</div>
+    <div class="kpi-value">${F(k.value, k.fmt === 'int' ? 0 : (k.fmt === 'num2' ? 2 : 1))}<small>${k.unit}</small></div>
+    <div class="kpi-foot">${badge}</div>`;
+  kpiWrap.appendChild(div);
+});
+
+/* ---------------- 1. 趋势 ---------------- */
+(() => {
+  const m = D.monthly;
+  mk('c-trend', {
+    grid:{left:48, right:52, top:28, bottom:26},
+    tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
+      formatter: p => {
+        const i = p[0].dataIndex;
+        return `<b>${m.months[i]}</b><br/>净GMV：<b>${m.net_gmv[i]}</b> 万元<br/>
+                订单量：${F(m.orders[i],0)} 笔<br/>买家数：${F(m.buyers[i],0)} 人<br/>
+                客单价：¥${m.aov[i]}<br/>支付转化率：${m.cvr[i]}%`;
+      }},
+    xAxis:{type:'category', data:m.months, ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:C.axis, fontSize:11, interval:0}},
+    yAxis:[
+      {type:'value', name:'万元', nameTextStyle:{color:C.axis, fontSize:11, padding:[0,0,0,-24]},
+       ...baseAxis},
+      {type:'value', name:'元', scale:true, min: v => Math.floor(v.min * 0.97),
+       max: v => Math.ceil(v.max * 1.03),
+       nameTextStyle:{color:C.axis, fontSize:11},
+       ...baseAxis, splitLine:{show:false},
+       axisLabel:{color:C.axis, fontSize:11, formatter:v=>v}}
+    ],
+    series:[
+      {name:'净GMV', type:'bar', barWidth:'46%', data:m.net_gmv,
+        itemStyle:{borderRadius:[4,4,0,0],
+          color:new echarts.graphic.LinearGradient(0,0,0,1,[
+            {offset:0,color:'#5b86f7'},{offset:1,color:'#dbe5ff'}])},
+        emphasis:{itemStyle:{color:'#3b6ef5'}}},
+      {name:'客单价', type:'line', yAxisIndex:1, data:m.aov, smooth:true,
+        symbol:'circle', symbolSize:6, lineStyle:{width:2.2, color:C.amber},
+        itemStyle:{color:'#fff', borderColor:C.amber, borderWidth:2},
+        label:{show:false}}
+    ]
+  });
+})();
+
+/* ---------------- 2. 漏斗 ---------------- */
+(() => {
+  const s = D.funnel;
+  mk('c-funnel', {
+    tooltip:{...baseTip, trigger:'item',
+      formatter: p => `${p.name}<br/>会话数：<b>${F(p.value,0)}</b><br/>占浏览：${p.data.rate}%`},
+    series:[{
+      type:'funnel', left:'1%', right:'40%', top:6, bottom:6,
+      sort:'none', gap:5, minSize:'26%', maxSize:'100%',
+      label:{show:true, position:'right', distance:10,
+        formatter: p => `{n|${p.name}} {v|${F(p.value,0)}}\n{r|占浏览 ${p.data.rate}%${p.data.step ? ' · 环节 ' + p.data.step + '%' : ''}}`,
+        rich:{
+          n:{fontSize:12, color:'#141a22', fontWeight:600},
+          v:{fontSize:11, color:'#3b6ef5', fontWeight:600, padding:[0,0,0,3]},
+          r:{fontSize:10.5, color:'#9099a6', lineHeight:15}
+        }},
+      labelLine:{show:true, length:9, lineStyle:{color:'#d5dae2', width:1}},
+      itemStyle:{borderWidth:0},
+      data:s.map((x,i)=>({
+        name:x.name, value:x.value, rate:x.rate, step:x.step,
+        itemStyle:{color:['#3b6ef5','#5b86f7','#7fa0fa','#a9c0fc'][i]}
+      }))
+    }]
+  });
+})();
+
+/* ---------------- 3. 渠道 RPS ---------------- */
+(() => {
+  const d = [...D.funnel_channel].sort((a,b)=>a.rps-b.rps);
+  mk('c-channel', {
+    grid:{left:78, right:78, top:16, bottom:24},
+    tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
+      formatter: p => {
+        const x = d[p[0].dataIndex];
+        return `<b>${x.name}</b><br/>每会话产值：<b>¥${x.rps}</b><br/>支付转化率：${x.cvr}%<br/>
+                会话数：${F(x.sessions,0)}<br/>净GMV：${x.net_gmv} 万（占${x.gmv_share}%）<br/>
+                客单价：¥${x.aov}<br/>退款率：${x.refund_rate}%`;
+      }},
+    xAxis:{type:'value', ...baseAxis, name:'元/会话', nameTextStyle:{color:C.axis,fontSize:11}},
+    yAxis:{type:'category', data:d.map(x=>x.name), ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:'#3c4653', fontSize:12}},
+    series:[{
+      type:'bar', barWidth:14, data:d.map(x=>x.rps),
+      itemStyle:{borderRadius:[0,7,7,0],
+        color:p => {
+          const v = p.value;
+          return v > 15 ? C.blue : v > 10 ? '#7c9bf7' : '#c9d4e6';
+        }},
+      label:{show:true, position:'right', fontSize:11, color:'#5c6675',
+        formatter: p => `¥${p.value}  ·  CVR ${d[p.dataIndex].cvr}%`}
+    }]
+  });
+})();
+
+/* ---------------- 4. 价格带 ---------------- */
+(() => {
+  const p = D.price_band;
+  mk('c-price', {
+    grid:{left:44, right:16, top:34, bottom:26},
+    legend:{right:0, top:0, itemWidth:9, itemHeight:9, itemGap:14,
+      textStyle:{color:'#5c6675', fontSize:11}},
+    tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
+      formatter: pp => {
+        const i = pp[0].dataIndex;
+        return `<b>¥${p[i].band}</b><br/>订单占比：${p[i].order_share}%<br/>
+                GMV占比：<b>${p[i].gmv_share}%</b><br/>净GMV：${p[i].gmv} 万`;
+      }},
+    xAxis:{type:'category', data:p.map(x=>x.band), ...baseAxis, splitLine:{show:false}},
+    yAxis:{type:'value', name:'%', ...baseAxis},
+    series:[
+      {name:'订单占比', type:'bar', data:p.map(x=>x.order_share), barWidth:'32%',
+        itemStyle:{color:'#c9d4e6', borderRadius:[3,3,0,0]}},
+      {name:'GMV占比', type:'bar', data:p.map(x=>x.gmv_share), barWidth:'32%',
+        itemStyle:{color:C.blue, borderRadius:[3,3,0,0]}}
+    ]
+  });
+})();
+
+/* ---------------- 5. RFM ---------------- */
+(() => {
+  const r = D.rfm;
+  document.getElementById('paretoTag').textContent = `头部20%用户贡献 ${D.pareto.top20_gmv_share}% 净GMV`;
+  const names = r.map(x=>x.name);
+  const grp = n => n.indexOf('重要') === 0 ? C.blue : '#c9d4e6';
+  mk('c-rfm', {
+    grid:{left:108, right:56, top:34, bottom:22},
+    legend:{right:0, top:0, itemWidth:9, itemHeight:9, textStyle:{color:'#5c6675', fontSize:11}},
+    tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
+      formatter: p => {
+        const i = p[0].dataIndex, x = r[i];
+        return `<b>${x.name}</b><br/>人数：${F(x.users,0)}（${x.user_share}%）<br/>
+                净GMV：${x.gmv} 万（${x.gmv_share}%）<br/>
+                客单价：¥${x.aov}<br/>人均频次：${x.freq}<br/>平均沉睡：${F(x.recency,0)} 天`;
+      }},
+    xAxis:{type:'value', name:'%', ...baseAxis},
+    yAxis:{type:'category', data:names, ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:'#3c4653', fontSize:11.5}},
+    series:[
+      {name:'人数占比', type:'bar', data:r.map(x=>x.user_share), barWidth:9,
+        itemStyle:{color:'#cdd6e4', borderRadius:3}},
+      {name:'GMV占比', type:'bar', data:r.map((x,i)=>({value:x.gmv_share,
+          itemStyle:{color:grp(x.name), borderRadius:3}})), barWidth:9,
+        label:{show:true, position:'right', fontSize:10.5, color:'#5c6675',
+          formatter:p=>p.value+'%'}}
+    ]
+  });
+
+  const tb = document.querySelector('#segTable tbody');
+  const colorOf = n => n.indexOf('重要')===0 ? C.blue : '#c9d4e6';
+  tb.innerHTML = r.map((x,i)=>`<tr class="${i===0||i===1?'hl':''}">
+      <td><span class="dot" style="background:${colorOf(x.name)}"></span>${x.name}</td>
+      <td>${F(x.users,0)}</td>
+      <td>${x.gmv}</td>
+      <td>¥${F(x.aov,0)}</td>
+      <td>${x.freq}</td>
+      <td>${F(x.recency,0)}天</td>
+    </tr>`).join('');
+})();
+
+/* ---------------- 6. 新老客 ---------------- */
+(() => {
+  const n = D.new_old;
+  mk('c-newold', {
+    grid:{left:44, right:44, top:34, bottom:26},
+    legend:{right:0, top:0, itemWidth:9, itemHeight:9, textStyle:{color:'#5c6675', fontSize:11}},
+    tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
+      formatter: p => {
+        const i = p[0].dataIndex;
+        return `<b>${n[i].month}</b><br/>新客GMV：${n[i].new_gmv} 万<br/>老客GMV：${n[i].old_gmv} 万<br/>
+                新客占比：<b>${n[i].new_ratio}%</b>`;
+      }},
+    xAxis:{type:'category', data:n.map(x=>x.month), ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:C.axis, fontSize:10.5, interval:1}},
+    yAxis:[{type:'value', ...baseAxis},
+           {type:'value', min:0, max:60, ...baseAxis, splitLine:{show:false}}],
+    series:[
+      {name:'老客', type:'bar', stack:'g', data:n.map(x=>x.old_gmv), barWidth:'52%',
+        itemStyle:{color:'#c9d4e6'}},
+      {name:'新客', type:'bar', stack:'g', data:n.map(x=>x.new_gmv), barWidth:'52%',
+        itemStyle:{color:C.blue, borderRadius:[3,3,0,0]}},
+      {name:'新客占比', type:'line', yAxisIndex:1, data:n.map(x=>x.new_ratio), smooth:true,
+        symbol:'circle', symbolSize:5, lineStyle:{width:2, color:C.amber},
+        itemStyle:{color:'#fff', borderColor:C.amber, borderWidth:2}}
+    ]
+  });
+})();
+
+/* ---------------- 7. 次月留存 ---------------- */
+(() => {
+  const r = D.new_retention;
+  const avg = r.reduce((a,b)=>a+b.m1_rate,0)/r.length;
+  mk('c-retention', {
+    grid:{left:46, right:20, top:26, bottom:26},
+    tooltip:{...baseTip, trigger:'axis',
+      formatter: p => {
+        const i = p[0].dataIndex;
+        return `<b>${r[i].month}</b><br/>新客数：${r[i].size} 人<br/>次月留存：<b>${r[i].m1_rate}%</b>`;
+      }},
+    xAxis:{type:'category', data:r.map(x=>x.month), ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:C.axis, fontSize:10.5, interval:1}},
+    yAxis:{type:'value', name:'%', ...baseAxis},
+    series:[{
+      type:'line', data:r.map(x=>x.m1_rate), smooth:true, symbol:'circle', symbolSize:6,
+      lineStyle:{width:2.2, color:C.violet},
+      itemStyle:{color:'#fff', borderColor:C.violet, borderWidth:2},
+      areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+        {offset:0,color:'rgba(124,92,240,.22)'},{offset:1,color:'rgba(124,92,240,.02)'}])},
+      markLine:{silent:true, symbol:'none',
+        data:[{yAxis:+avg.toFixed(1), label:{formatter:`均值 ${avg.toFixed(1)}%`,
+          color:'#5c6675', fontSize:10.5, position:'insideEndTop'},
+          lineStyle:{color:'#b6bcc6', type:'dashed', width:1}}]}
+    }]
+  });
+})();
+
+/* ---------------- 8. Cohort ---------------- */
+(() => {
+  const c = D.cohort;
+  const maxI = Math.max(...c.map(x=>x.rates.length));
+  const xs = [], ys = c.map(x=>x.cohort), data = [];
+  for (let i=0;i<maxI;i++) xs.push('M' + i);
+  c.forEach((row, yi) => row.rates.forEach((v, xi) => {
+    if (v !== null) data.push([xi, yi, v]);
+  }));
+  mk('c-cohort', {
+    grid:{left:70, right:70, top:14, bottom:52},
+    tooltip:{...baseTip, formatter: p => {
+      const row = c[p.value[1]];
+      return `<b>${row.cohort} 首购队列</b>（${row.size} 人）<br/>首购后第 ${p.value[0]} 月：<b>${p.value[2]}%</b>`;
+    }},
+    xAxis:{type:'category', data:xs, ...baseAxis, splitArea:{show:false},
+      axisLabel:{color:C.axis, fontSize:11}},
+    yAxis:{type:'category', data:ys, ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:C.axis, fontSize:11}},
+    visualMap:{min:0, max:60, calculable:false, orient:'vertical', right:6, top:'center',
+      itemWidth:10, itemHeight:96, textStyle:{color:C.axis, fontSize:10},
+      inRange:{color:['#f2f5fb','#c9d9ff','#8fb0ff','#5d86f5','#2f5fe0']}},
+    series:[{
+      type:'heatmap', data, label:{show:true, fontSize:10, color:'#3c4653',
+        formatter: p => p.value[2] === 100 ? '100' : p.value[2].toFixed(1)},
+      itemStyle:{borderColor:'#fff', borderWidth:1.5, borderRadius:3},
+      emphasis:{itemStyle:{shadowBlur:6, shadowColor:'rgba(0,0,0,.15)'}}
+    }]
+  });
+})();
+
+/* ---------------- 9. 品类四象限 ---------------- */
+(() => {
+  const c = D.category;
+  const avgX = c.reduce((a,b)=>a+b.share,0)/c.length;
+  const avgY = c.reduce((a,b)=>a+b.growth,0)/c.length;
+  const colOf = x => (x.share>=avgX && x.growth>=avgY) ? C.amber
+                  : (x.share>=avgX ? C.blue : x.growth>=avgY ? C.violet : '#b6bcc6');
+  mk('c-quad', {
+    grid:{left:52, right:26, top:30, bottom:44},
+    tooltip:{...baseTip, formatter: p => {
+      const x = p.data.raw;
+      return `<b>${x.name}</b><br/>份额：${x.share}%　增速：${x.growth}%<br/>
+              净GMV：${x.gmv} 万<br/>毛利：${x.margin}%　退款率：${x.refund}%<br/>客单价：¥${x.aov}`;
+    }},
+    xAxis:{type:'value', name:'净GMV份额 %', nameLocation:'middle', nameGap:26,
+      nameTextStyle:{color:C.axis, fontSize:11}, ...baseAxis, scale:true},
+    yAxis:{type:'value', name:'份额增速 %', nameTextStyle:{color:C.axis, fontSize:11},
+      ...baseAxis, scale:true},
+    series:[{
+      type:'scatter',
+      data:c.map(x=>({value:[x.share, x.growth], raw:x,
+        symbolSize:Math.max(20, Math.sqrt(x.gmv)*2.6),
+        itemStyle:{color:colOf(x), opacity:.82, borderColor:'#fff', borderWidth:1.5}})),
+      label:{show:true, position:'top', fontSize:11, color:'#3c4653',
+        formatter: p => p.data.raw.name},
+      markLine:{silent:true, symbol:'none',
+        label:{show:false},
+        lineStyle:{color:'#dfe3e9', type:'dashed', width:1},
+        data:[{xAxis:avgX},{yAxis:avgY}]},
+      emphasis:{itemStyle:{opacity:1}}
+    }]
+  });
+})();
+
+/* ---------------- 10. 品类 GMV + 退款 ---------------- */
+(() => {
+  const c = D.category;
+  mk('c-cat', {
+    grid:{left:56, right:46, top:34, bottom:44},
+    legend:{right:0, top:0, itemWidth:9, itemHeight:9, textStyle:{color:'#5c6675', fontSize:11}},
+    tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
+      formatter: p => {
+        const i = p[0].dataIndex, x = c[i];
+        return `<b>${x.name}</b><br/>净GMV：${x.gmv} 万（${x.share}%）<br/>
+                退款率：<b>${x.refund}%</b><br/>毛利率：${x.margin}%<br/>客单价：¥${x.aov}`;
+      }},
+    xAxis:{type:'category', data:c.map(x=>x.name), ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:C.axis, fontSize:10.5, interval:0, rotate:20}},
+    yAxis:[{type:'value', ...baseAxis},
+           {type:'value', ...baseAxis, splitLine:{show:false}, max:18}],
+    series:[
+      {name:'净GMV', type:'bar', data:c.map(x=>x.gmv), barWidth:'44%',
+        itemStyle:{borderRadius:[4,4,0,0],
+          color:new echarts.graphic.LinearGradient(0,0,0,1,[
+            {offset:0,color:'#7fa0fa'},{offset:1,color:'#dbe5ff'}])}},
+      {name:'退款率', type:'line', yAxisIndex:1, data:c.map(x=>x.refund),
+        symbol:'circle', symbolSize:6, lineStyle:{width:2, color:C.red},
+        itemStyle:{color:'#fff', borderColor:C.red, borderWidth:2}}
+    ]
+  });
+})();
+
+/* ---------------- 11. 热力图 ---------------- */
+(() => {
+  const hours = Array.from({length:24}, (_,i)=>i+'时');
+  const days = ['周一','周二','周三','周四','周五','周六','周日'];
+  mk('c-heat', {
+    grid:{left:56, right:20, top:14, bottom:48},
+    tooltip:{...baseTip, formatter: p =>
+      `<b>${days[p.value[1]]} ${hours[p.value[0]]}</b><br/>全年订单占比：<b>${p.value[2]}%</b>`},
+    xAxis:{type:'category', data:hours, ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:C.axis, fontSize:10, interval:1}},
+    yAxis:{type:'category', data:days, ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:C.axis, fontSize:11}},
+    visualMap:{min:0, max:1.1, orient:'horizontal', left:'center', bottom:2,
+      itemWidth:10, itemHeight:80, textStyle:{color:C.axis, fontSize:10},
+      inRange:{color:['#f5f7fc','#d7e2ff','#a5bffe','#6d90f9','#2f5fe0']}},
+    series:[{
+      type:'heatmap', data:D.heatmap,
+      itemStyle:{borderColor:'#fff', borderWidth:1.5, borderRadius:2},
+      emphasis:{itemStyle:{shadowBlur:6, shadowColor:'rgba(0,0,0,.15)'}}
+    }]
+  });
+})();
+
+/* ---------------- 12. 大促 ---------------- */
+(() => {
+  const p = [...D.promo].sort((a,b)=>b.gmv_per_day-a.gmv_per_day);
+  mk('c-promo', {
+    grid:{left:58, right:20, top:20, bottom:46},
+    tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
+      formatter: pp => {
+        const x = p[pp[0].dataIndex];
+        return `<b>${x.name}</b>（${x.days}天）<br/>日均净GMV：<b>${x.gmv_per_day} 万</b><br/>
+                相当于日常：${x.lift} 倍<br/>客单价：¥${x.aov}<br/>支付转化率：${x.cvr}%<br/>折扣率：${x.disc}%`;
+      }},
+    xAxis:{type:'category', data:p.map(x=>x.name), ...baseAxis, splitLine:{show:false},
+      axisLabel:{color:C.axis, fontSize:10.5, interval:0, rotate:20}},
+    yAxis:{type:'value', name:'万元/天', ...baseAxis},
+    series:[{
+      type:'bar', data:p.map(x=>x.gmv_per_day), barWidth:'48%',
+      itemStyle:{borderRadius:[4,4,0,0],
+        color: pp => pp.dataIndex < 2 ? C.blue : (p[pp.dataIndex].lift < 1 ? '#cdd6e4' : '#a3bcf8')},
+      label:{show:true, position:'top', fontSize:10.5, color:'#5c6675',
+        formatter: pp => p[pp.dataIndex].lift + '×'}
+    }]
+  });
+})();
+
+/* ---------------- 洞察 ---------------- */
+const INS = [
+  {
+    t:'渠道效率差 3 倍以上，信息流广告是"低效流量"',
+    p:`信息流广告每会话产值仅 <b>¥6.22</b>，为私域社群（<b>¥19.78</b>）的 31%；其支付转化率 <b>1.89%</b> 为全渠道最低，
+       却占用了 <b>21%</b> 的访问会话，全年只贡献 <b>9.0%</b> 净GMV。`,
+    a:'动作：将信息流预算的 20–30% 迁移至私域复购触达与搜索广告，按当前 RPS 差估算年化增量空间约 40–60 万。'
+  },
+  {
+    t:'漏斗的真正漏点在「加购→下单」，不是支付环节',
+    p:`购物车到下单仅 <b>33.2%</b> 转化，流失 <b>7.6 万</b> 次，为四环节中最大绝对流失；而「下单→支付」达 <b>79.1%</b>，
+       说明支付链路健康，问题出在决策环节（价格敏感、凑单门槛、运费与时效顾虑）。`,
+    a:'动作：加购页加"满减凑单推荐 + 限时券 + 免邮提示"，把该环节做到 38%（行业常见水平），可多出约 5,400 单、¥180 万 GMV。'
+  },
+  {
+    t:'18% 的用户贡献 49% 的 GMV，但真正该投的不是他们',
+    p:`重要价值客户（<b>18.2%</b> 人）贡献 <b>48.8%</b> 净GMV，人均 5.6 单，本来就在自转；
+       更值得投的是「重要保持客户」——<b>10.8%</b> 人数、<b>19.5%</b> GMV、历史 3.4 单、客单价 ¥431，但平均已 <b>154 天</b>未回购。`,
+    a:'动作：把唤醒预算从"一般挽留客户"（35% 人数仅 9% GMV、沉睡 211 天）转向"重要保持客户"，召回 ROI 预计高 2 倍以上。'
+  },
+  {
+    t:'女装是"高 GMV 低质量"的虚胖品类',
+    p:`女装净GMV 份额 <b>20.8%</b> 排第一，但份额增速 <b>−9.7%</b>、退款率 <b>14.5%</b> 为全品类最高（全站均值 7.9%）；
+       对照美妆个护：份额 <b>19.6%</b>、增速 <b>+10.3%</b>、毛利 <b>62.3%</b>、退款率仅 <b>6.0%</b>。`,
+    a:'动作：女装重点抓尺码/图文一致性与退货原因归因（目标退款率降到 11%），同时把首页与投放资源向美妆、运动户外倾斜。'
+  },
+  {
+    t:'大促是"以价换量"，增量里有水分',
+    p:`双11 日均净GMV 为日常 <b>2.01 倍</b>、支付转化率由 <b>4.46%</b> 升至 <b>5.33%</b>，但折扣率从 <b>8.8%</b> 加深到
+       <b>29.4%</b>，客单价由 <b>¥353</b> 降至 <b>¥269</b>；双11 次月（12 月上半月）GMV 环比回落，存在需求前置透支。`,
+    a:'动作：大促主推"高毛利组合装"而非全店直降，把折扣力度控制在 25% 以内，可同时保住转化与客单价。'
+  }
+];
+document.getElementById('insights').innerHTML = INS.map((x,i)=>`
+  <div class="ins">
+    <span class="no">0${i+1}</span>
+    <h4>${x.t}</h4>
+    <p>${x.p}</p>
+    <div class="act">${x.a}</div>
+  </div>`).join('');
+
+/* ---------------- resize ---------------- */
+const ro = new ResizeObserver(es => {
+  es.forEach(e => { const ch = echarts.getInstanceByDom(e.target); if (ch) ch.resize(); });
+});
+document.querySelectorAll('.chart').forEach(el => ro.observe(el));
+window.addEventListener('resize', () => charts.forEach(c => c.resize()));
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# 原始数据体积较大（44MB）且可由 src/generate_data.py 固定种子复现，不入库
+data/raw/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 看板临时截图
+dashboard/_*.png
