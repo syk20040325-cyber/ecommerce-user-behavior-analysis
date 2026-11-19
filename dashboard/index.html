@@ -38,7 +38,7 @@
   nav a:hover{background:#eef2fd;color:var(--blue);}
   /* ---------- layout ---------- */
   main{max-width:1560px;margin:0 auto;padding:22px 26px 64px;}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;}
+  .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;}
   .card{
     background:var(--card);border:1px solid var(--line);border-radius:12px;
     box-shadow:var(--shadow);padding:16px 18px 12px;min-width:0;
@@ -114,7 +114,28 @@
     .c8,.c7,.c6,.c5,.c4{grid-column:span 12 !important}
   }
   @media (max-width:760px){
-    .kpi-card{grid-column:span 6} .ins{grid-column:span 12} nav{display:none}
+    .hd{flex-wrap:wrap;padding:12px 16px;gap:10px}
+    .brand h1{font-size:15px}
+    /* 窄屏导航改为横向滑动，不再隐藏 */
+    nav{margin-left:0;width:100%;overflow-x:auto;padding-bottom:3px;
+      scrollbar-width:none;-ms-overflow-style:none}
+    nav::-webkit-scrollbar{display:none}
+    nav a{flex:0 0 auto;white-space:nowrap;padding:5px 10px;font-size:12px}
+    main{padding:16px 14px 44px}
+    footer{padding:0 14px 32px}
+    .kpi-card{grid-column:span 6;padding:12px 12px 11px}
+    .kpi-value{font-size:22px;letter-spacing:-.3px}
+    .kpi-value small{font-size:11px}
+    .kpi-foot{font-size:10.5px;gap:6px;flex-wrap:wrap}
+    .card{padding:14px 12px 10px}
+    .card-hd{flex-wrap:wrap;gap:6px}
+    .card-hd .tag{margin-left:0}
+    .ins{grid-column:span 12}
+  }
+  @media (max-width:430px){
+    .kpi-value{font-size:20px}
+    .sect-title span{display:none}
+    .card-hd h3{font-size:13px}
   }
   .c3{grid-column:span 3} .c4{grid-column:span 4} .c5{grid-column:span 5}
   .c6{grid-column:span 6} .c7{grid-column:span 7} .c8{grid-column:span 8}
@@ -236,7 +257,7 @@
     <div class="card c12">
       <div class="card-hd">
         <div><h3>月度 Cohort 留存矩阵</h3>
-          <div class="sub">行=首购月份队列，列=首购后第 N 月仍有下单的用户占比（订单口径）</div></div>
+          <div class="sub">行=首购月份队列，列=首购后第 N 月仍有下单的用户占比（订单口径）；颜色越深留存越高</div></div>
         <div class="tag">首购后 1 个月即跌至 20% 上下</div>
       </div>
       <div id="c-cohort" class="chart" style="height:300px"></div>
@@ -311,6 +332,8 @@
 const D = window.DASHBOARD_DATA;
 const charts = [];
 const F = (n, d=1) => Number(n).toLocaleString('zh-CN', {minimumFractionDigits:d, maximumFractionDigits:d});
+/* 窄屏标记：手机上标签间距、网格留白需整体收紧（按首屏宽度判定） */
+const NARROW = Math.min(window.innerWidth, document.documentElement.clientWidth) < 700;
 const C = {blue:'#3b6ef5', cyan:'#0ea5b7', violet:'#7c5cf0', amber:'#e9a13b',
            red:'#dd524c', green:'#1c9c6b', grid:'#eef0f3', axis:'#9099a6'};
 
@@ -372,7 +395,8 @@ D.kpi.forEach((k, i) => {
                 客单价：¥${m.aov[i]}<br/>支付转化率：${m.cvr[i]}%`;
       }},
     xAxis:{type:'category', data:m.months, ...baseAxis, splitLine:{show:false},
-      axisLabel:{color:C.axis, fontSize:11, interval:0}},
+      axisLabel:{color:C.axis, fontSize:NARROW ? 10 : 11, interval:NARROW ? 'auto' : 0,
+        hideOverlap:true}},
     yAxis:[
       {type:'value', name:'万元', nameTextStyle:{color:C.axis, fontSize:11, padding:[0,0,0,-24]},
        ...baseAxis},
@@ -426,7 +450,7 @@ D.kpi.forEach((k, i) => {
 (() => {
   const d = [...D.funnel_channel].sort((a,b)=>a.rps-b.rps);
   mk('c-channel', {
-    grid:{left:78, right:78, top:16, bottom:24},
+    grid:{left:NARROW ? 60 : 78, right:NARROW ? 52 : 78, top:16, bottom:24},
     tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
       formatter: p => {
         const x = d[p[0].dataIndex];
@@ -436,7 +460,7 @@ D.kpi.forEach((k, i) => {
       }},
     xAxis:{type:'value', ...baseAxis, name:'元/会话', nameTextStyle:{color:C.axis,fontSize:11}},
     yAxis:{type:'category', data:d.map(x=>x.name), ...baseAxis, splitLine:{show:false},
-      axisLabel:{color:'#3c4653', fontSize:12}},
+      axisLabel:{color:'#3c4653', fontSize:NARROW ? 11 : 12}},
     series:[{
       type:'bar', barWidth:14, data:d.map(x=>x.rps),
       itemStyle:{borderRadius:[0,7,7,0],
@@ -444,8 +468,9 @@ D.kpi.forEach((k, i) => {
           const v = p.value;
           return v > 15 ? C.blue : v > 10 ? '#7c9bf7' : '#c9d4e6';
         }},
-      label:{show:true, position:'right', fontSize:11, color:'#5c6675',
-        formatter: p => `¥${p.value}  ·  CVR ${d[p.dataIndex].cvr}%`}
+      label:{show:true, position:'right', distance:NARROW ? 5 : 10,
+        fontSize:NARROW ? 10 : 11, color:'#5c6675',
+        formatter: p => NARROW ? `¥${p.value}` : `¥${p.value}  ·  CVR ${d[p.dataIndex].cvr}%`}
     }]
   });
 })();
@@ -574,6 +599,7 @@ D.kpi.forEach((k, i) => {
 /* ---------------- 8. Cohort ---------------- */
 (() => {
   const c = D.cohort;
+  if (NARROW) document.getElementById('c-cohort').style.height = '352px';
   const maxI = Math.max(...c.map(x=>x.rates.length));
   const xs = [], ys = c.map(x=>x.cohort), data = [];
   for (let i=0;i<maxI;i++) xs.push('M' + i);
@@ -581,20 +607,25 @@ D.kpi.forEach((k, i) => {
     if (v !== null) data.push([xi, yi, v]);
   }));
   mk('c-cohort', {
-    grid:{left:70, right:70, top:14, bottom:52},
+    grid:{left:NARROW ? 44 : 70, right:NARROW ? 12 : 70,
+          top:NARROW ? 10 : 14, bottom:NARROW ? 42 : 52},
     tooltip:{...baseTip, formatter: p => {
       const row = c[p.value[1]];
       return `<b>${row.cohort} 首购队列</b>（${row.size} 人）<br/>首购后第 ${p.value[0]} 月：<b>${p.value[2]}%</b>`;
     }},
     xAxis:{type:'category', data:xs, ...baseAxis, splitArea:{show:false},
-      axisLabel:{color:C.axis, fontSize:11}},
+      axisLabel:{color:C.axis, fontSize:NARROW ? 9.5 : 11}},
     yAxis:{type:'category', data:ys, ...baseAxis, splitLine:{show:false},
-      axisLabel:{color:C.axis, fontSize:11}},
-    visualMap:{min:0, max:60, calculable:false, orient:'vertical', right:6, top:'center',
-      itemWidth:10, itemHeight:96, textStyle:{color:C.axis, fontSize:10},
-      inRange:{color:['#f2f5fb','#c9d9ff','#8fb0ff','#5d86f5','#2f5fe0']}},
+      axisLabel:{color:C.axis, fontSize:NARROW ? 9.5 : 11}},
+    visualMap:Object.assign(
+      {min:0, max:60, calculable:false,
+       itemWidth:NARROW ? 74 : 10, itemHeight:NARROW ? 8 : 96,
+       textStyle:{color:C.axis, fontSize:NARROW ? 9 : 10},
+       inRange:{color:['#f2f5fb','#c9d9ff','#8fb0ff','#5d86f5','#2f5fe0']}},
+      NARROW ? {orient:'horizontal', left:'center', bottom:2, itemGap:6, show:false}
+             : {orient:'vertical', right:6, top:'center'}),
     series:[{
-      type:'heatmap', data, label:{show:true, fontSize:10, color:'#3c4653',
+      type:'heatmap', data, label:{show:true, fontSize:NARROW ? 8.5 : 10, color:'#3c4653',
         formatter: p => p.value[2] === 100 ? '100' : p.value[2].toFixed(1)},
       itemStyle:{borderColor:'#fff', borderWidth:1.5, borderRadius:3},
       emphasis:{itemStyle:{shadowBlur:6, shadowColor:'rgba(0,0,0,.15)'}}
@@ -640,7 +671,8 @@ D.kpi.forEach((k, i) => {
 (() => {
   const c = D.category;
   mk('c-cat', {
-    grid:{left:56, right:46, top:34, bottom:44},
+    grid:{left:NARROW ? 44 : 56, right:NARROW ? 30 : 46, top:34,
+          bottom:NARROW ? 56 : 44},
     legend:{right:0, top:0, itemWidth:9, itemHeight:9, textStyle:{color:'#5c6675', fontSize:11}},
     tooltip:{...baseTip, trigger:'axis', axisPointer:{type:'shadow'},
       formatter: p => {
@@ -649,7 +681,8 @@ D.kpi.forEach((k, i) => {
                 退款率：<b>${x.refund}%</b><br/>毛利率：${x.margin}%<br/>客单价：¥${x.aov}`;
       }},
     xAxis:{type:'category', data:c.map(x=>x.name), ...baseAxis, splitLine:{show:false},
-      axisLabel:{color:C.axis, fontSize:10.5, interval:0, rotate:20}},
+      axisLabel:{color:C.axis, fontSize:NARROW ? 9.5 : 10.5, interval:0,
+        rotate:NARROW ? 42 : 20, hideOverlap:false}},
     yAxis:[{type:'value', ...baseAxis},
            {type:'value', ...baseAxis, splitLine:{show:false}, max:18}],
     series:[
@@ -669,11 +702,11 @@ D.kpi.forEach((k, i) => {
   const hours = Array.from({length:24}, (_,i)=>i+'时');
   const days = ['周一','周二','周三','周四','周五','周六','周日'];
   mk('c-heat', {
-    grid:{left:56, right:20, top:14, bottom:48},
+    grid:{left:NARROW ? 40 : 56, right:NARROW ? 10 : 20, top:14, bottom:48},
     tooltip:{...baseTip, formatter: p =>
       `<b>${days[p.value[1]]} ${hours[p.value[0]]}</b><br/>全年订单占比：<b>${p.value[2]}%</b>`},
     xAxis:{type:'category', data:hours, ...baseAxis, splitLine:{show:false},
-      axisLabel:{color:C.axis, fontSize:10, interval:1}},
+      axisLabel:{color:C.axis, fontSize:NARROW ? 9 : 10, interval:NARROW ? 3 : 1}},
     yAxis:{type:'category', data:days, ...baseAxis, splitLine:{show:false},
       axisLabel:{color:C.axis, fontSize:11}},
     visualMap:{min:0, max:1.1, orient:'horizontal', left:'center', bottom:2,
